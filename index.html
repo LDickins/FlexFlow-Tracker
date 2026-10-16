@@ -1,279 +1,58 @@
-<script>
-  // 👇 PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW 👇
-  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNLIXC7Smzlle3Bwj91V8OcESybOrSn1DfrMuxP1syxOB0LvXZwxAnGqKynduXIiQ/exec';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlexFlow — Fluctuating Income & Expense App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+    .glass { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.15); }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
 
-  const STORAGE_KEY = 'flexflow_monthly_data_v1';
-  const monthPicker = document.getElementById('monthPicker');
-  let syncTimeout = null;
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header & Month Selector -->
+    <header class="glass rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>⚡ FlexFlow</span>
+          <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Variable Income Edition</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Log each month's actual earnings, deduct expenses live, and track what you keep.</p>
+      </div>
 
-  const now = new Date();
-  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  monthPicker.value = currentYM;
+      <div class="flex flex-wrap items-center gap-2">
+        <input type="month" id="monthPicker" class="bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500" />
+        <button onclick="copyFixedFromPrevMonth()" title="Copy fixed bills from previous month" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3.5 py-2.5 rounded-xl border border-slate-700 transition">
+          ↻ Copy Fixed Bills
+        </button>
+        <button onclick="pullFromCloud()" id="syncBtn" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-medium px-3.5 py-2.5 rounded-xl transition">
+          ☁️ Synced
+        </button>
+        <button onclick="exportCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3.5 py-2.5 rounded-xl transition">
+          ↓ CSV
+        </button>
+      </div>
+    </header>
 
-  function setSyncStatus(text, isSaving = false) {
-    const btn = document.getElementById('syncBtn');
-    if (!btn) return;
-    btn.textContent = text;
-    btn.className = isSaving
-      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium px-3.5 py-2.5 rounded-xl transition'
-      : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-medium px-3.5 py-2.5 rounded-xl transition';
-  }
+    <!-- Live Hero Dashboard -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-5 border-l-4 border-l-emerald-500">
+        <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">This Month's Income</span>
+        <div id="totalIncomeDisplay" class="text-3xl font-extrabold text-emerald-400 mt-1">€0.00</div>
+        <p id="incomeCountText" class="text-xs text-slate-400 mt-1">0 income entries logged</p>
+      </div>
 
-  function loadAllData() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-    const seed = {
-      [currentYM]: {
-        incomes: [
-          { id: 1, name: 'efood Payouts', amount: 950 },
-          { id: 2, name: 'Gardening Jobs', amount: 500 }
-        ],
-        expenses: [
-          { id: 101, name: 'Rent', amount: 350, fixed: true },
-          { id: 102, name: 'EFKA / Social Security', amount: 240, fixed: true },
-          { id: 103, name: 'Electricity, Water & Internet', amount: 85, fixed: true },
-          { id: 104, name: 'Fuel & TDM 850 Maintenance', amount: 160, fixed: false },
-          { id: 105, name: 'Supermarket & Groceries', amount: 240, fixed: false }
-        ]
-      }
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    return seed;
-  }
+      <div class="glass rounded-2xl p-5 border-l-4 border-l-rose-500">
+        <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Deducted Expenses</span>
+        <div id="totalExpenseDisplay" class="text-3xl font-extrabold text-rose-400 mt-1">€0.00</div>
+        <p id="expenseSplitText" class="text-xs text-slate-400 mt-1">Fixed: €0 | Variable: €0</p>
+      </div>
 
-  let db = loadAllData();
-
-  // Pull latest data from Google Sheet when opening the app
-  async function pullFromCloud() {
-    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('PASTE_YOUR')) return;
-    try {
-      setSyncStatus('☁️ Pulling...', true);
-      const res = await fetch(GOOGLE_SCRIPT_URL);
-      const cloudDb = await res.json();
-      if (cloudDb && Object.keys(cloudDb).length > 0) {
-        db = cloudDb;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-        render();
-      }
-      setSyncStatus('☁️ Synced');
-    } catch (err) {
-      console.error('Cloud pull error:', err);
-      setSyncStatus('⚠️ Offline (Local)');
-    }
-  }
-
-  // Push changes to Google Sheet automatically (debounced by 800ms so typing is smooth)
-  function pushToCloud() {
-    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('PASTE_YOUR')) return;
-    setSyncStatus('⏳ Saving...', true);
-    clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(async () => {
-      try {
-        await fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors', // Avoids CORS preflight issues with Google Apps Script
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(db)
-        });
-        setSyncStatus('☁️ Synced');
-      } catch (err) {
-        console.error('Cloud push error:', err);
-        setSyncStatus('⚠️ Offline');
-      }
-    }, 800);
-  }
-
-  function getActiveMonthData() {
-    const ym = monthPicker.value;
-    if (!db[ym]) db[ym] = { incomes: [], expenses: [] };
-    return db[ym];
-  }
-
-  function saveAndRender() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    render();
-    pushToCloud();
-  }
-
-  function render() {
-    const data = getActiveMonthData();
-    const incContainer = document.getElementById('incomeList');
-    const expContainer = document.getElementById('expenseList');
-
-    incContainer.innerHTML = data.incomes.length === 0
-      ? `<div class="text-xs text-slate-500 italic py-6 text-center">No income logged for this month yet.</div>`
-      : data.incomes.map(item => `
-        <div class="flex items-center justify-between gap-2 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2">
-          <input type="text" value="${item.name}" onchange="updateIncomeName(${item.id}, this.value)"
-            class="bg-transparent text-sm text-slate-100 flex-1 focus:outline-none focus:underline" />
-          <div class="flex items-center gap-1.5">
-            <span class="text-slate-400 text-xs">€</span>
-            <input type="number" step="0.01" value="${item.amount}" oninput="updateIncomeAmount(${item.id}, this.value)"
-              class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500" />
-            <button onclick="removeIncome(${item.id})" class="text-slate-500 hover:text-rose-400 px-1.5 text-sm">✕</button>
-          </div>
-        </div>
-      `).join('');
-
-    expContainer.innerHTML = data.expenses.length === 0
-      ? `<div class="text-xs text-slate-500 italic py-6 text-center">No expenses deducted this month yet.</div>`
-      : data.expenses.map(item => `
-        <div class="flex items-center justify-between gap-2 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2">
-          <button onclick="toggleFixed(${item.id})"
-            class="text-xs px-2 py-0.5 rounded-md border ${item.fixed ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-700/40 text-slate-400 border-slate-600'}">
-            ${item.fixed ? '📌 Fixed' : '⚡ Var'}
-          </button>
-          <input type="text" value="${item.name}" onchange="updateExpenseName(${item.id}, this.value)"
-            class="bg-transparent text-sm text-slate-100 flex-1 focus:outline-none focus:underline" />
-          <div class="flex items-center gap-1.5">
-            <span class="text-slate-400 text-xs">€</span>
-            <input type="number" step="0.01" value="${item.amount}" oninput="updateExpenseAmount(${item.id}, this.value)"
-              class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-sm font-semibold text-rose-400 focus:outline-none focus:border-rose-500" />
-            <button onclick="removeExpense(${item.id})" class="text-slate-500 hover:text-rose-400 px-1.5 text-sm">✕</button>
-          </div>
-        </div>
-      `).join('');
-
-    updateTotals();
-  }
-
-  function updateTotals() {
-    const data = getActiveMonthData();
-    const totalInc = data.incomes.reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
-    const fixedExp = data.expenses.filter(e => e.fixed).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
-    const varExp = data.expenses.filter(e => !e.fixed).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
-    const totalExp = fixedExp + varExp;
-    const net = totalInc - totalExp;
-    const margin = totalInc > 0 ? ((net / totalInc) * 100).toFixed(1) : 0;
-
-    document.getElementById('totalIncomeDisplay').textContent = `€${totalInc.toFixed(2)}`;
-    document.getElementById('incomeCountText').textContent = `${data.incomes.length} income stream(s) this month`;
-    document.getElementById('totalExpenseDisplay').textContent = `€${totalExp.toFixed(2)}`;
-    document.getElementById('expenseSplitText').textContent = `Fixed: €${fixedExp.toFixed(0)} | Variable: €${varExp.toFixed(0)}`;
-
-    const netEl = document.getElementById('netRemainingDisplay');
-    netEl.textContent = `${net >= 0 ? '€' : '-€'}${Math.abs(net).toFixed(2)}`;
-    netEl.className = `text-3xl font-extrabold mt-1 ${net >= 0 ? 'text-white' : 'text-rose-400'}`;
-    document.getElementById('marginText').textContent = totalInc > 0
-      ? (net >= 0 ? `${margin}% of income kept` : `Over budget by €${Math.abs(net).toFixed(2)}`)
-      : 'Log income to calculate margin';
-
-    if (totalInc > 0) {
-      const fPct = Math.min(100, (fixedExp / totalInc) * 100);
-      const vPct = Math.min(100 - fPct, (varExp / totalInc) * 100);
-      const kPct = Math.max(0, 100 - fPct - vPct);
-      document.getElementById('fixedBar').style.width = `${fPct}%`;
-      document.getElementById('varBar').style.width = `${vPct}%`;
-      document.getElementById('keepBar').style.width = `${kPct}%`;
-      document.getElementById('burnStatusLabel').textContent =
-        `Fixed: ${fPct.toFixed(0)}% · Variable: ${vPct.toFixed(0)}% · Kept: ${kPct.toFixed(0)}%`;
-    } else {
-      document.getElementById('fixedBar').style.width = '0%';
-      document.getElementById('varBar').style.width = '0%';
-      document.getElementById('keepBar').style.width = '0%';
-      document.getElementById('burnStatusLabel').textContent = 'Add income to see your live burn bar';
-    }
-  }
-
-  function handleAddIncome(e) {
-    e.preventDefault();
-    const name = document.getElementById('incName').value.trim();
-    const amount = parseFloat(document.getElementById('incAmount').value) || 0;
-    getActiveMonthData().incomes.push({ id: Date.now(), name, amount });
-    document.getElementById('incName').value = '';
-    document.getElementById('incAmount').value = '';
-    saveAndRender();
-  }
-
-  function quickAddIncome(name, amount) {
-    getActiveMonthData().incomes.push({ id: Date.now(), name, amount });
-    saveAndRender();
-  }
-
-  function updateIncomeAmount(id, val) {
-    const item = getActiveMonthData().incomes.find(i => i.id === id);
-    if (item) { item.amount = parseFloat(val) || 0; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); updateTotals(); pushToCloud(); }
-  }
-
-  function updateIncomeName(id, val) {
-    const item = getActiveMonthData().incomes.find(i => i.id === id);
-    if (item) { item.name = val; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); pushToCloud(); }
-  }
-
-  function removeIncome(id) {
-    const data = getActiveMonthData();
-    data.incomes = data.incomes.filter(i => i.id !== id);
-    saveAndRender();
-  }
-
-  function handleAddExpense(e) {
-    e.preventDefault();
-    const name = document.getElementById('expName').value.trim();
-    const amount = parseFloat(document.getElementById('expAmount').value) || 0;
-    const fixed = document.getElementById('expFixed').checked;
-    getActiveMonthData().expenses.push({ id: Date.now(), name, amount, fixed });
-    document.getElementById('expName').value = '';
-    document.getElementById('expAmount').value = '';
-    document.getElementById('expFixed').checked = false;
-    saveAndRender();
-  }
-
-  function quickAddExpense(name, amount, fixed) {
-    getActiveMonthData().expenses.push({ id: Date.now(), name, amount, fixed });
-    saveAndRender();
-  }
-
-  function updateExpenseAmount(id, val) {
-    const item = getActiveMonthData().expenses.find(e => e.id === id);
-    if (item) { item.amount = parseFloat(val) || 0; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); updateTotals(); pushToCloud(); }
-  }
-
-  function updateExpenseName(id, val) {
-    const item = getActiveMonthData().expenses.find(e => e.id === id);
-    if (item) { item.name = val; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); pushToCloud(); }
-  }
-
-  function toggleFixed(id) {
-    const item = getActiveMonthData().expenses.find(e => e.id === id);
-    if (item) { item.fixed = !item.fixed; saveAndRender(); }
-  }
-
-  function removeExpense(id) {
-    const data = getActiveMonthData();
-    data.expenses = data.expenses.filter(e => e.id !== id);
-    saveAndRender();
-  }
-
-  function copyFixedFromPrevMonth() {
-    const months = Object.keys(db).sort();
-    const currentIdx = months.indexOf(monthPicker.value);
-    const sourceMonth = currentIdx > 0 ? months[currentIdx - 1] : months[months.length - 1];
-    if (!sourceMonth || !db[sourceMonth]) return;
-
-    const fixedToCopy = db[sourceMonth].expenses.filter(e => e.fixed);
-    const currentExpenses = getActiveMonthData().expenses;
-    fixedToCopy.forEach(f => {
-      if (!currentExpenses.some(c => c.name.toLowerCase() === f.name.toLowerCase())) {
-        currentExpenses.push({ id: Date.now() + Math.random(), name: f.name, amount: f.amount, fixed: true });
-      }
-    });
-    saveAndRender();
-  }
-
-  function exportCSV() {
-    const ym = monthPicker.value;
-    const data = getActiveMonthData();
-    let csv = 'Month,Type,Category/Fixed,Description,Amount(EUR)\n';
-    data.incomes.forEach(i => { csv += `${ym},Income,Variable Stream,"${i.name}",${i.amount}\n`; });
-    data.expenses.forEach(e => { csv += `${ym},Expense,${e.fixed ? 'Fixed' : 'Variable'},"${e.name}",-${e.amount}\n`; });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `FlexFlow_${ym}.csv`;
-    a.click();
-  }
-
-  monthPicker.addEventListener('change', render);
-  render();
-  pullFromCloud(); // Automatically sync from Google Sheet on startup!
-</script>
+      <div class="glass rounded-2xl p-5 border-l-4 border-l-indigo-500">
+        <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Net Remaining (Pocket)</span>
+        <div id="netRemainingDisplay" class="text-3xl font-extrabold text-white mt-1">€0.00</div>
+        <p id="marginText" class="text-xs text-indigo-30
