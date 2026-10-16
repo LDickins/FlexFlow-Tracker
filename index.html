@@ -55,4 +55,367 @@
       <div class="glass rounded-2xl p-5 border-l-4 border-l-indigo-500">
         <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Net Remaining (Pocket)</span>
         <div id="netRemainingDisplay" class="text-3xl font-extrabold text-white mt-1">€0.00</div>
-        <p id="marginText" class="text-xs text-indigo-30
+        <p id="marginText" class="text-xs text-indigo-300 mt-1">0% of income kept</p>
+      </div>
+    </section>
+
+    <!-- Visual Cashflow Burn Bar -->
+    <section class="glass rounded-2xl p-5 space-y-2">
+      <div class="flex justify-between text-xs font-medium text-slate-300">
+        <span>Income Burn Breakdown</span>
+        <span id="burnStatusLabel">Add income to see your live burn bar</span>
+      </div>
+      <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden flex">
+        <div id="fixedBar" class="bg-amber-500 h-full transition-all duration-300" style="width: 0%" title="Fixed Bills"></div>
+        <div id="varBar" class="bg-rose-500 h-full transition-all duration-300" style="width: 0%" title="Variable Expenses"></div>
+        <div id="keepBar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%" title="Net Kept"></div>
+      </div>
+      <div class="flex gap-5 text-xs text-slate-400 pt-1">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Fixed Bills</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Variable Spending</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Leftover Surplus</span>
+      </div>
+    </section>
+
+    <!-- Main Two-Column Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- LEFT COLUMN: FLUCTUATING INCOME STREAMS -->
+      <div class="glass rounded-2xl p-5 flex flex-col justify-between space-y-4">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-emerald-400">+ 1. Add Month's Income Streams</h2>
+            <span class="text-xs text-slate-400">Edit numbers inline anytime</span>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="quickAddIncome('efood Payout', 450)" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg px-2.5 py-1 transition">+ efood Payout</button>
+            <button onclick="quickAddIncome('Gardening Job', 200)" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg px-2.5 py-1 transition">+ Gardening Job</button>
+            <button onclick="quickAddIncome('Tips / Extra', 50)" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg px-2.5 py-1 transition">+ Tips / Extra</button>
+          </div>
+
+          <div id="incomeList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+
+        <form onsubmit="handleAddIncome(event)" class="pt-3 border-t border-slate-800 flex gap-2">
+          <input id="incName" type="text" placeholder="Source (e.g. Week 1 Payout, Garden Job)" required class="flex-1 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+          <input id="incAmount" type="number" step="0.01" placeholder="€ Amount" required class="w-28 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500" />
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl text-sm transition">Add</button>
+        </form>
+      </div>
+
+      <!-- RIGHT COLUMN: EXPENSE DEDUCTIONS -->
+      <div class="glass rounded-2xl p-5 flex flex-col justify-between space-y-4">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-rose-400">− 2. Deduct Monthly Expenses</h2>
+            <span class="text-xs text-slate-400">Toggle Fixed 📌 vs Variable</span>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="quickAddExpense('Rent', 350, true)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg px-2.5 py-1 transition">+ 📌 Rent</button>
+            <button onclick="quickAddExpense('EFKA / Contributions', 240, true)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg px-2.5 py-1 transition">+ 📌 EFKA</button>
+            <button onclick="quickAddExpense('Electricity & Internet', 85, true)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg px-2.5 py-1 transition">+ 📌 Utilities</button>
+            <button onclick="quickAddExpense('Fuel & Maintenance', 130, false)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg px-2.5 py-1 transition">+ ⛽ Fuel/Maint</button>
+            <button onclick="quickAddExpense('Supermarket', 220, false)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg px-2.5 py-1 transition">+ 🛒 Groceries</button>
+          </div>
+
+          <div id="expenseList" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+
+        <form onsubmit="handleAddExpense(event)" class="pt-3 border-t border-slate-800 flex flex-wrap sm:flex-nowrap gap-2">
+          <input id="expName" type="text" placeholder="Expense name (e.g. Supermarket)" required class="flex-1 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+          <input id="expAmount" type="number" step="0.01" placeholder="€ Amount" required class="w-28 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+          <label class="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/90 border border-slate-700 px-2.5 py-2 rounded-xl cursor-pointer">
+            <input id="expFixed" type="checkbox" class="accent-amber-500" />
+            <span>📌 Fixed</span>
+          </label>
+          <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-4 py-2 rounded-xl text-sm transition">Deduct</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Connected directly to your Google Apps Script Web App
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNLIXC7Smzlle3Bwj91V8OcESybOrSn1DfrMuxP1syxOB0LvXZwxAnGqKynduXIiQ/exec';
+
+    const STORAGE_KEY = 'flexflow_monthly_data_v1';
+    const monthPicker = document.getElementById('monthPicker');
+    let syncTimeout = null;
+
+    const now = new Date();
+    const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    monthPicker.value = currentYM;
+
+    function setSyncStatus(text, isSaving = false) {
+      const btn = document.getElementById('syncBtn');
+      if (!btn) return;
+      btn.textContent = text;
+      btn.className = isSaving
+        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium px-3.5 py-2.5 rounded-xl transition'
+        : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-medium px-3.5 py-2.5 rounded-xl transition';
+    }
+
+    function loadAllData() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+      const seed = {
+        [currentYM]: {
+          incomes: [
+            { id: 1, name: 'efood Payouts', amount: 950 },
+            { id: 2, name: 'Gardening Jobs', amount: 500 }
+          ],
+          expenses: [
+            { id: 101, name: 'Rent', amount: 350, fixed: true },
+            { id: 102, name: 'EFKA / Social Security', amount: 240, fixed: true },
+            { id: 103, name: 'Electricity, Water & Internet', amount: 85, fixed: true },
+            { id: 104, name: 'Fuel & TDM 850 Maintenance', amount: 160, fixed: false },
+            { id: 105, name: 'Supermarket & Groceries', amount: 240, fixed: false }
+          ]
+        }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+      return seed;
+    }
+
+    let db = loadAllData();
+
+    async function pullFromCloud() {
+      if (!GOOGLE_SCRIPT_URL) return;
+      try {
+        setSyncStatus('☁️ Pulling...', true);
+        const res = await fetch(GOOGLE_SCRIPT_URL, { redirect: 'follow' });
+        const cloudDb = await res.json();
+        if (cloudDb && Object.keys(cloudDb).length > 0) {
+          db = cloudDb;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+          render();
+          setSyncStatus('☁️ Synced');
+        } else {
+          // First time connecting: push local seed data up to initialize the Google Sheet
+          pushToCloud();
+        }
+      } catch (err) {
+        console.error('Cloud pull error:', err);
+        setSyncStatus('⚠️ Offline (Local)');
+      }
+    }
+
+    function pushToCloud() {
+      if (!GOOGLE_SCRIPT_URL) return;
+      setSyncStatus('⏳ Saving...', true);
+      clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(async () => {
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(db)
+          });
+          setSyncStatus('☁️ Synced');
+        } catch (err) {
+          console.error('Cloud push error:', err);
+          setSyncStatus('⚠️ Offline');
+        }
+      }, 800);
+    }
+
+    function getActiveMonthData() {
+      const ym = monthPicker.value;
+      if (!db[ym]) db[ym] = { incomes: [], expenses: [] };
+      return db[ym];
+    }
+
+    function saveAndRender() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      render();
+      pushToCloud();
+    }
+
+    function render() {
+      const data = getActiveMonthData();
+      const incContainer = document.getElementById('incomeList');
+      const expContainer = document.getElementById('expenseList');
+
+      incContainer.innerHTML = data.incomes.length === 0
+        ? `<div class="text-xs text-slate-500 italic py-6 text-center">No income logged for this month yet.</div>`
+        : data.incomes.map(item => `
+          <div class="flex items-center justify-between gap-2 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2">
+            <input type="text" value="${item.name}" onchange="updateIncomeName(${item.id}, this.value)"
+              class="bg-transparent text-sm text-slate-100 flex-1 focus:outline-none focus:underline" />
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400 text-xs">€</span>
+              <input type="number" step="0.01" value="${item.amount}" oninput="updateIncomeAmount(${item.id}, this.value)"
+                class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500" />
+              <button onclick="removeIncome(${item.id})" class="text-slate-500 hover:text-rose-400 px-1.5 text-sm">✕</button>
+            </div>
+          </div>
+        `).join('');
+
+      expContainer.innerHTML = data.expenses.length === 0
+        ? `<div class="text-xs text-slate-500 italic py-6 text-center">No expenses deducted this month yet.</div>`
+        : data.expenses.map(item => `
+          <div class="flex items-center justify-between gap-2 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2">
+            <button onclick="toggleFixed(${item.id})"
+              class="text-xs px-2 py-0.5 rounded-md border ${item.fixed ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-700/40 text-slate-400 border-slate-600'}">
+              ${item.fixed ? '📌 Fixed' : '⚡ Var'}
+            </button>
+            <input type="text" value="${item.name}" onchange="updateExpenseName(${item.id}, this.value)"
+              class="bg-transparent text-sm text-slate-100 flex-1 focus:outline-none focus:underline" />
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400 text-xs">€</span>
+              <input type="number" step="0.01" value="${item.amount}" oninput="updateExpenseAmount(${item.id}, this.value)"
+                class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-right text-sm font-semibold text-rose-400 focus:outline-none focus:border-rose-500" />
+              <button onclick="removeExpense(${item.id})" class="text-slate-500 hover:text-rose-400 px-1.5 text-sm">✕</button>
+            </div>
+          </div>
+        `).join('');
+
+      updateTotals();
+    }
+
+    function updateTotals() {
+      const data = getActiveMonthData();
+      const totalInc = data.incomes.reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+      const fixedExp = data.expenses.filter(e => e.fixed).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+      const varExp = data.expenses.filter(e => !e.fixed).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+      const totalExp = fixedExp + varExp;
+      const net = totalInc - totalExp;
+      const margin = totalInc > 0 ? ((net / totalInc) * 100).toFixed(1) : 0;
+
+      document.getElementById('totalIncomeDisplay').textContent = `€${totalInc.toFixed(2)}`;
+      document.getElementById('incomeCountText').textContent = `${data.incomes.length} income stream(s) this month`;
+      document.getElementById('totalExpenseDisplay').textContent = `€${totalExp.toFixed(2)}`;
+      document.getElementById('expenseSplitText').textContent = `Fixed: €${fixedExp.toFixed(0)} | Variable: €${varExp.toFixed(0)}`;
+
+      const netEl = document.getElementById('netRemainingDisplay');
+      netEl.textContent = `${net >= 0 ? '€' : '-€'}${Math.abs(net).toFixed(2)}`;
+      netEl.className = `text-3xl font-extrabold mt-1 ${net >= 0 ? 'text-white' : 'text-rose-400'}`;
+      document.getElementById('marginText').textContent = totalInc > 0
+        ? (net >= 0 ? `${margin}% of income kept` : `Over budget by €${Math.abs(net).toFixed(2)}`)
+        : 'Log income to calculate margin';
+
+      if (totalInc > 0) {
+        const fPct = Math.min(100, (fixedExp / totalInc) * 100);
+        const vPct = Math.min(100 - fPct, (varExp / totalInc) * 100);
+        const kPct = Math.max(0, 100 - fPct - vPct);
+        document.getElementById('fixedBar').style.width = `${fPct}%`;
+        document.getElementById('varBar').style.width = `${vPct}%`;
+        document.getElementById('keepBar').style.width = `${kPct}%`;
+        document.getElementById('burnStatusLabel').textContent =
+          `Fixed: ${fPct.toFixed(0)}% · Variable: ${vPct.toFixed(0)}% · Kept: ${kPct.toFixed(0)}%`;
+      } else {
+        document.getElementById('fixedBar').style.width = '0%';
+        document.getElementById('varBar').style.width = '0%';
+        document.getElementById('keepBar').style.width = '0%';
+        document.getElementById('burnStatusLabel').textContent = 'Add income to see your live burn bar';
+      }
+    }
+
+    function handleAddIncome(e) {
+      e.preventDefault();
+      const name = document.getElementById('incName').value.trim();
+      const amount = parseFloat(document.getElementById('incAmount').value) || 0;
+      getActiveMonthData().incomes.push({ id: Date.now(), name, amount });
+      document.getElementById('incName').value = '';
+      document.getElementById('incAmount').value = '';
+      saveAndRender();
+    }
+
+    function quickAddIncome(name, amount) {
+      getActiveMonthData().incomes.push({ id: Date.now(), name, amount });
+      saveAndRender();
+    }
+
+    function updateIncomeAmount(id, val) {
+      const item = getActiveMonthData().incomes.find(i => i.id === id);
+      if (item) { item.amount = parseFloat(val) || 0; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); updateTotals(); pushToCloud(); }
+    }
+
+    function updateIncomeName(id, val) {
+      const item = getActiveMonthData().incomes.find(i => i.id === id);
+      if (item) { item.name = val; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); pushToCloud(); }
+    }
+
+    function removeIncome(id) {
+      const data = getActiveMonthData();
+      data.incomes = data.incomes.filter(i => i.id !== id);
+      saveAndRender();
+    }
+
+    function handleAddExpense(e) {
+      e.preventDefault();
+      const name = document.getElementById('expName').value.trim();
+      const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+      const fixed = document.getElementById('expFixed').checked;
+      getActiveMonthData().expenses.push({ id: Date.now(), name, amount, fixed });
+      document.getElementById('expName').value = '';
+      document.getElementById('expAmount').value = '';
+      document.getElementById('expFixed').checked = false;
+      saveAndRender();
+    }
+
+    function quickAddExpense(name, amount, fixed) {
+      getActiveMonthData().expenses.push({ id: Date.now(), name, amount, fixed });
+      saveAndRender();
+    }
+
+    function updateExpenseAmount(id, val) {
+      const item = getActiveMonthData().expenses.find(e => e.id === id);
+      if (item) { item.amount = parseFloat(val) || 0; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); updateTotals(); pushToCloud(); }
+    }
+
+    function updateExpenseName(id, val) {
+      const item = getActiveMonthData().expenses.find(e => e.id === id);
+      if (item) { item.name = val; localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); pushToCloud(); }
+    }
+
+    function toggleFixed(id) {
+      const item = getActiveMonthData().expenses.find(e => e.id === id);
+      if (item) { item.fixed = !item.fixed; saveAndRender(); }
+    }
+
+    function removeExpense(id) {
+      const data = getActiveMonthData();
+      data.expenses = data.expenses.filter(e => e.id !== id);
+      saveAndRender();
+    }
+
+    function copyFixedFromPrevMonth() {
+      const months = Object.keys(db).sort();
+      const currentIdx = months.indexOf(monthPicker.value);
+      const sourceMonth = currentIdx > 0 ? months[currentIdx - 1] : months[months.length - 1];
+      if (!sourceMonth || !db[sourceMonth]) return;
+
+      const fixedToCopy = db[sourceMonth].expenses.filter(e => e.fixed);
+      const currentExpenses = getActiveMonthData().expenses;
+      fixedToCopy.forEach(f => {
+        if (!currentExpenses.some(c => c.name.toLowerCase() === f.name.toLowerCase())) {
+          currentExpenses.push({ id: Date.now() + Math.random(), name: f.name, amount: f.amount, fixed: true });
+        }
+      });
+      saveAndRender();
+    }
+
+    function exportCSV() {
+      const ym = monthPicker.value;
+      const data = getActiveMonthData();
+      let csv = 'Month,Type,Category/Fixed,Description,Amount(EUR)\n';
+      data.incomes.forEach(i => { csv += `${ym},Income,Variable Stream,"${i.name}",${i.amount}\n`; });
+      data.expenses.forEach(e => { csv += `${ym},Expense,${e.fixed ? 'Fixed' : 'Variable'},"${e.name}",-${e.amount}\n`; });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `FlexFlow_${ym}.csv`;
+      a.click();
+    }
+
+    monthPicker.addEventListener('change', render);
+    render();
+    pullFromCloud();
+  </script>
+</body>
+</html>
